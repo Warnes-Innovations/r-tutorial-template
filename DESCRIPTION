@@ -12,8 +12,6 @@ Encoding: UTF-8
 Depends:
     R (>= 4.4.0)
 Imports:
-    addinslist,
-    devtools,
     flextable,
     gtsummary,
     haven,
@@ -21,12 +19,13 @@ Imports:
     import,
     janitor,
     lubridate,
-    quarto,
     readxl,
     sf,
-    sortLines,
     tidyverse,
     tigris,
     writexl
 Suggests:
-    broom
+    broom,
+    devtools,
+    quarto,
+    sortLines
