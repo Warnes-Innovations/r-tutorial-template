@@ -1,0 +1,157 @@
+---
+title: "[Disease] Surveillance Summary"
+subtitle: "[Jurisdiction] — [Year Range]"
+date: today
+date-format: "MMMM D, YYYY"
+author: "[Analyst Name]"
+
+# ── Parameters ────────────────────────────────────────────────────────────────
+# Use params to run this report for different diseases or jurisdictions without
+# editing the prose. Render with a custom parameter from R:
+#
+#   quarto::quarto_render(
+#     "scripts/05_report.qmd",
+#     execute_params = list(disease = "Gonorrhea", year = 2024)
+#   )
+
+params:
+  disease: "Gonorrhea"
+  year: 2024
+
+# ── Output ────────────────────────────────────────────────────────────────────
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    embed-resources: true   # single self-contained file; easy to email
+    theme: cosmo
+  docx:
+    toc: true               # remove this block if Word output isn't needed
+
+# ── Output directory ──────────────────────────────────────────────────────────
+# Rendered file will land in 06_output_docs/ when rendered from the project root.
+output-file: "surveillance_report.html"
+
+# ── Execution options ─────────────────────────────────────────────────────────
+execute:
+  echo: false     # hide code in report; set to true for a methods appendix
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+
+library(tidyverse)
+library(here)
+library(gtsummary)
+library(flextable)
+
+devtools::load_all(here::here())
+
+# Load pre-computed analytic results
+rates_by_year      <- readRDS(here("04_output_data", "rates_by_year.rds"))
+rates_by_county    <- readRDS(here("04_output_data", "rates_by_county.rds"))
+counts_by_age_sex  <- readRDS(here("04_output_data", "counts_by_age_sex.rds"))
+counts_by_race_eth <- readRDS(here("04_output_data", "counts_by_race_eth.rds"))
+
+current_year  <- params$year
+disease_label <- params$disease
+
+total_cases <- rates_by_year |>
+  filter(epiyear == current_year) |>
+  pull(n_cases)
+
+current_rate <- rates_by_year |>
+  filter(epiyear == current_year) |>
+  pull(rate_per_100k)
+```
+
+## Overview
+
+In `r current_year`, **`r format(total_cases, big.mark = ",")`** cases of
+`r disease_label` were reported in [Jurisdiction], for an overall incidence rate of
+**`r current_rate` per 100,000 population**.
+
+> **Suppression note:** Counts fewer than 5 are suppressed (`*`) in all tables and
+> figures to reduce the risk of re-identification.
+
+---
+
+## Trends Over Time
+
+```{r}
+#| label: fig-trend
+#| fig-cap: !expr paste(disease_label, "incidence rate per 100,000 population,", min(rates_by_year$epiyear), "–", max(rates_by_year$epiyear))
+
+ggplot(rates_by_year, aes(x = epiyear, y = rate_per_100k)) +
+  geom_line() +
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = rates_by_year$epiyear) +
+  labs(x = "Year", y = "Rate per 100,000") +
+  theme_minimal()
+```
+
+---
+
+## Demographics
+
+### By Age and Sex
+
+```{r}
+#| label: fig-pyramid
+#| fig-cap: !expr paste(disease_label, "cases by age group and sex,", current_year)
+
+pyramid_data <- counts_by_age_sex |>
+  filter(!is.na(sex)) |>
+  mutate(n_plot = if_else(sex == "Male", -n_cases, n_cases))
+
+ggplot(pyramid_data, aes(x = n_plot, y = age_group, fill = sex)) +
+  geom_bar(stat = "identity") +
+  scale_x_continuous(labels = abs) +
+  scale_fill_manual(values = c("Male" = "#4E79A7", "Female" = "#F28E2B")) +
+  labs(x = "Number of Cases", y = "Age Group", fill = NULL) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+### By Race/Ethnicity
+
+```{r}
+#| label: tbl-race
+#| tbl-cap: !expr paste(disease_label, "cases by race/ethnicity,", current_year)
+
+counts_by_race_eth |>
+  mutate(n_display = if_else(is.na(n_cases_public), "*", as.character(n_cases_public))) |>
+  select(`Race/Ethnicity` = race_eth, `Cases` = n_display, `%` = pct) |>
+  flextable() |>
+  autofit()
+```
+
+---
+
+## Geographic Distribution
+
+```{r}
+#| label: tbl-county
+#| tbl-cap: !expr paste("Top 10 counties by", disease_label, "rate per 100,000,", current_year)
+
+rates_by_county |>
+  slice_max(rate_per_100k, n = 10) |>
+  mutate(n_display = if_else(is.na(n_cases_public), "*", as.character(n_cases_public))) |>
+  select(`County FIPS` = county_fips,
+         `Cases`       = n_display,
+         `Rate per 100,000` = rate_per_100k) |>
+  flextable() |>
+  autofit()
+```
+
+---
+
+## Methods Note
+
+Incidence rates were calculated as cases per 100,000 population using
+[Census / ACS] population estimates. Epidemiological year is defined by the
+CDC epidemiological week of diagnosis date. Counts fewer than 5 are suppressed.
+
+*Report generated `r Sys.Date()` using R `r paste(R.version$major, R.version$minor, sep = ".")` and Quarto.*

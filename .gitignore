@@ -1,0 +1,49 @@
+# R project files
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# renv (uncomment if using renv)
+# renv/library/
+# renv/staging/
+
+# ── Raw and input data ───────────────────────────────────────────────────────
+# By default, keep data OUT of version control.
+# Case-level surveillance data almost certainly contains PII.
+# If your raw data is non-sensitive (e.g., public CDC Atlas files), you may
+# remove these lines selectively.
+
+02_raw_data/*
+!02_raw_data/README.md
+!02_raw_data/.gitkeep
+!02_raw_data/cases.csv
+!02_raw_data/population.csv
+!02_raw_data/county_reference.csv
+
+03_cleaned_data/*
+!03_cleaned_data/README.md
+!03_cleaned_data/.gitkeep
+
+04_output_data/*
+!04_output_data/README.md
+!04_output_data/.gitkeep
+
+# ── Output files ─────────────────────────────────────────────────────────────
+# Rendered reports and figures can be regenerated from source; keep them out
+# of version control to avoid bloating the repository.
+05_output_figures/*
+!05_output_figures/README.md
+!05_output_figures/.gitkeep
+
+06_output_docs/*
+!06_output_docs/README.md
+!06_output_docs/.gitkeep
+
+# Common sensitive file extensions
+*.sas7bdat
+*.xpt
+
+# OS noise
+.DS_Store
+Thumbs.db

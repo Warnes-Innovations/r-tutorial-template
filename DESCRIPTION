@@ -1,0 +1,32 @@
+Package: ProjectName
+Title: STD/HIV Surveillance Analysis
+Version: 0.1.0
+Date: 2026-05-23
+Authors@R:
+    person("First", "Last", email = "analyst@health.gov", role = c("aut", "cre"))
+Description: Analysis of communicable disease surveillance data for STD/HIV
+    reporting. Produces case counts, incidence rates, demographic breakdowns,
+    and standardised surveillance summary reports.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends:
+    R (>= 4.4.0)
+Imports:
+    addinslist,
+    devtools,
+    flextable,
+    gtsummary,
+    haven,
+    here,
+    import,
+    janitor,
+    lubridate,
+    quarto,
+    readxl,
+    sf,
+    sortLines,
+    tidyverse,
+    tigris,
+    writexl
+Suggests:
+    broom
