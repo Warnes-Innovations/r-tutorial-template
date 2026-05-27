@@ -1,0 +1,143 @@
+---
+title: "Paper Ball Toss - Collaborative Analysis"
+output: html_notebook
+---
+
+```{r setup}
+renv::restore()  # restore packages to the recorded state
+if(FALSE)
+{
+  {
+    renv::install('summarytools')
+    renv::install('zoo')
+    renv::update()
+    renv::snapshot() # record the packages we have installed
+    # renv::status()
+  }
+}
+
+library(readxl)
+library(here)
+library(summarytools)
+library(dplyr)
+library(tidyr)
+```
+
+# Collect Data
+
+Copy the data into the project
+
+```{r}
+raw_data_dir <- here("02_raw_data/")
+
+# "paper_ball_toss_template.xlsx" original data
+# "paper_ball_toss_template_2.xlsx" remove extra rows
+raw_data_path <- file.path(raw_data_dir, "paper_ball_toss_template_2.xlsx")
+```
+# Load raw data
+
+```{r}
+toss_raw <- read_xlsx(raw_data_path)
+```
+
+# Data Cleaining 
+
+## Review raw data
+
+```{r}
+summary(toss_raw)
+```
+
+```{r}
+toss_raw |> 
+  dfSummary() |> 
+  stview()
+```
+
+## Clean `participant_id`
+
+```{r}
+toss_clean <- toss_raw |>
+  # To rename columns:
+  rename(
+    # participant_id = variable_name_here
+  ) |>
+  mutate(
+    participant_id = case_when(
+      participant_id=="AN" ~ "ANN",
+      participant_id=="MD" ~ "MB",
+      participant_id=="N DC" ~ "NDC",
+      .default = participant_id
+    )
+  ) |>
+  mutate(
+    # fill in missing set numbrer by counting
+    # cumulative number of times we've seen the current participant's id
+    set_num = rep(c(1, 2, 3), each=8*3) 
+  ) |>
+  mutate(
+    # fill in missing values of participant
+    # participant_id = as.factor(participant_id),
+    participant_id = zoo::na.locf(participant_id)
+    
+  ) |>
+  select(
+    -target_cell
+  )
+
+
+toss_clean |> dfSummary() |> 
+  stview()
+```
+
+# Calculate Total Score for Each Participant
+
+```{r}
+total_score <- toss_clean |>
+  group_by(participant_id) |>
+  summarise(total_score = sum(zone_score)) |>
+  ungroup() |>
+  arrange(-total_score)
+```
+
+```{r}
+total_score
+```
+
+# Does the order in the rotation impact total score?
+
+```{r}
+toss_scores <- toss_clean |>
+  left_join(total_score, by = "participant_id") |>
+  group_by(set_num, participant_id) |>
+    filter( row_number() == 1) |>
+  ungroup() |>
+  group_by(set_num) |>
+    mutate(
+      rank = row_number()
+    ) |>
+  ungroup() |>
+  group_by(participant_id) |>
+  summarise(
+    total_score  = first(total_score),
+    average_rank = mean(rank)
+  )
+
+```
+
+```{r}
+toss_scores
+```
+
+```{r}
+plot(
+  total_score ~ average_rank, data=toss_scores
+ )
+cor(toss_scores$total_score, toss_scores$average_rank)
+```
+
+```{r}
+fit <- lm(total_score ~ average_rank, data = toss_scores)
+summary(fit)
+```
+

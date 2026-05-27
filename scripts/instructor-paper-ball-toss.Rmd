@@ -1,0 +1,81 @@
+---
+title: "Paper Toss Data Analysis - Instructor"
+output: html_notebook
+---
+
+```{r setup}
+renv::restore()
+if(FALSE)
+{
+  # renv::install('summarytools')
+  renv::update()
+  renv::snapshot()
+}
+
+library(dplyr)
+library(readr)
+library(readxl)
+library(here)
+library(summarytools)
+library(ggplot2)
+```
+
+# Load Data
+
+```{r load_raw_data}
+raw_data_dir <- here("02_raw_data")
+data_file <- file.path(raw_data_dir, "paper_ball_toss_template.csv")
+
+toss_raw <- read_csv(data_file)
+```
+
+# Data Cleaning
+
+## Exploration
+
+```{r summary}
+summary(toss_raw)
+```
+
+```{r summarytools}
+toss_raw |> 
+  dfSummary() |> 
+  stview()
+```
+
+```{r}
+toss_raw |>
+  select(-set_num, -target_cell) |>
+  plot()
+```
+
+```{r}
+g <- ggplot(data=toss_raw, aes(x=zone_score)) +
+  geom_bar()
+g
+```
+
+## Address Issues
+
+### Initials variation
+
+```{r}
+toss_clean <- toss_raw |>
+  mutate(
+    participant_id = case_when(
+      participant_id=="ANN"  ~ "AN",
+      participant_id=="MD"   ~ "MB",
+      participant_id=="N DC" ~ "NDC",
+      .default = participant_id
+    ),
+    participant_id = nafill(participant_id, type="locf")
+  ) 
+```
+
+
+```{r}
+toss_clean |> 
+  dfSummary() |>
+  stview()
+```
+
