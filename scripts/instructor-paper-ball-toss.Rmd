@@ -7,7 +7,6 @@ output: html_notebook
 renv::restore()
 if(FALSE)
 {
-  # renv::install('summarytools')
   renv::update()
   renv::snapshot()
 }
