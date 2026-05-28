@@ -8,8 +8,6 @@ renv::restore()  # restore packages to the recorded state
 if(FALSE)
 {
   {
-    renv::install('summarytools')
-    renv::install('zoo')
     renv::update()
     renv::snapshot() # record the packages we have installed
     # renv::status()
