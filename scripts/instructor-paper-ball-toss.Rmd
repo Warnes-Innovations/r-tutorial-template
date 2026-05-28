@@ -24,7 +24,7 @@ library(ggplot2)
 
 ```{r load_raw_data}
 raw_data_dir <- here("02_raw_data")
-data_file <- file.path(raw_data_dir, "paper_ball_toss_template.csv")
+data_file <- file.path(raw_data_dir, "paper_ball_toss_v2.csv")
 
 toss_raw <- read_csv(data_file)
 ```

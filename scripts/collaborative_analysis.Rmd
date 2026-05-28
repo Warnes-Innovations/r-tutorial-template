@@ -30,9 +30,9 @@ Copy the data into the project
 ```{r}
 raw_data_dir <- here("02_raw_data/")
 
-# "paper_ball_toss_template.xlsx" original data
-# "paper_ball_toss_template_2.xlsx" remove extra rows
-raw_data_path <- file.path(raw_data_dir, "paper_ball_toss_template_2.xlsx")
+# "paper_ball_toss.xlsx" original data
+# "paper_ball_toss_v2.xlsx" remove extra rows
+raw_data_path <- file.path(raw_data_dir, "paper_ball_toss_v2.xlsx")
 ```
 # Load raw data
 
