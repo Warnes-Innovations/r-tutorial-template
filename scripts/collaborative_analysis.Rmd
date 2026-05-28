@@ -8,9 +8,10 @@ renv::restore()  # restore packages to the recorded state
 if(FALSE)
 {
   {
-    renv::update()
+    # renv::install("zoo") # istall a new package
+    renv::update()   # check for upgraded packages
     renv::snapshot() # record the packages we have installed
-    # renv::status()
+    renv::status()
   }
 }
 
@@ -19,6 +20,8 @@ library(here)
 library(summarytools)
 library(dplyr)
 library(tidyr)
+library(here)
+library(ggplot2)
 ```
 
 # Collect Data
@@ -58,6 +61,7 @@ toss_raw |>
 toss_clean <- toss_raw |>
   # To rename columns:
   rename(
+    # NEW NAME       = OLD NAME
     # participant_id = variable_name_here
   ) |>
   mutate(
@@ -68,11 +72,11 @@ toss_clean <- toss_raw |>
       .default = participant_id
     )
   ) |>
-  mutate(
-    # fill in missing set numbrer by counting
-    # cumulative number of times we've seen the current participant's id
-    set_num = rep(c(1, 2, 3), each=8*3) 
-  ) |>
+  # mutate(
+  #   # fill in missing set numbrer by counting
+  #   # cumulative number of times we've seen the current participant's id
+  #   # set_num = rep(c(1, 2, 3), each=8*3) 
+  # ) |>
   mutate(
     # fill in missing values of participant
     # participant_id = as.factor(participant_id),
@@ -81,11 +85,63 @@ toss_clean <- toss_raw |>
   ) |>
   select(
     -target_cell
+  ) |>
+  rename(
+    toss_score = zone_score
   )
+```
 
 
+# Exporatory Data Analysis 
+
+## Univariate summaries and plots 
+
+```{r}
 toss_clean |> dfSummary() |> 
   stview()
+```
+
+## Bivariate summaries and plots
+
+```{r}
+ggplot(toss_clean, aes(x = participant_id, y = toss_score)) +
+  geom_boxplot() +
+  geom_jitter(
+    color="orange", 
+    size=1, 
+    alpha=0.5, 
+    width=0.25,
+    height=0.1,
+  )
+```
+## Multivariate Summaries and Visualizations
+
+
+```{r}
+ggplot(
+  toss_clean, 
+  aes(
+    x = factor(set_num), 
+    y = toss_score,
+    # color = factor(toss_in_set)
+  ) 
+) +
+  geom_boxplot() +
+  geom_jitter(
+    size=1, 
+    alpha=0.5, 
+    width=0.25,
+    height=0.1,
+    aes(
+      color = factor(toss_in_set),
+      )
+  ) +
+  facet_wrap(
+    vars(participant_id)
+  ) +
+  scale_shape_manual(
+    values = c("1", "2", "3")
+    )
 ```
 
 # Calculate Total Score for Each Participant
@@ -93,7 +149,11 @@ toss_clean |> dfSummary() |>
 ```{r}
 total_score <- toss_clean |>
   group_by(participant_id) |>
-  summarise(total_score = sum(zone_score)) |>
+  summarise(
+    mean_score  = mean(toss_score),
+    std_score   = sd  (toss_score),
+    total_score = sum (toss_score)
+  ) |>
   ungroup() |>
   arrange(-total_score)
 ```
@@ -108,12 +168,12 @@ total_score
 toss_scores <- toss_clean |>
   left_join(total_score, by = "participant_id") |>
   group_by(set_num, participant_id) |>
-    filter( row_number() == 1) |>
+  filter( row_number() == 1) |>
   ungroup() |>
   group_by(set_num) |>
-    mutate(
-      rank = row_number()
-    ) |>
+  mutate(
+    rank = row_number()
+  ) |>
   ungroup() |>
   group_by(participant_id) |>
   summarise(
@@ -130,7 +190,7 @@ toss_scores
 ```{r}
 plot(
   total_score ~ average_rank, data=toss_scores
- )
+)
 cor(toss_scores$total_score, toss_scores$average_rank)
 ```
 
@@ -138,4 +198,126 @@ cor(toss_scores$total_score, toss_scores$average_rank)
 fit <- lm(total_score ~ average_rank, data = toss_scores)
 summary(fit)
 ```
+
+```{r}
+x <- 10
+y <- 20
+
+
+fun <- function(x, y=1, z="a") {
+  
+  if(missing(y))
+    cat("y is missing\n")
+  
+  for(iteration in 1:3)
+  {
+    cat("x=",x,"\n")
+    cat("y=",y,"\n")
+    cat("z=",z,"\n")
+    cat("\n")
+  }
+}
+
+fun(2, z="b")
+
+
+```
+```{r}
+# Show the current searched environments
+search()
+
+# fetch a variable from a specific environment
+get_var <- function(df, column_name)
+{
+  df[[column_name]]
+}
+
+get_var(iris, "Species")
+
+
+```
+# Create a function to calculate total score 
+```{r}
+total_scores <- function(df_scores, high=c("better", "worse"))
+{
+  high <- match.arg(high)
+  if(!is.data.frame(df_scores))
+    stop("Expected a data frame object for `df_scores")
+
+  required_cols <- c("participant_id", "set_num", "toss_in_set", "toss_score")
+  if(all(required_cols %in% colnames(df_scores)) == FALSE) {
+    missing_cols <- !(required_cols %in% colnames(df_scores))
+    missing_names <- required_cols[missing_cols]
+    stop("Missing necessary columns: ", 
+         paste("'", missing_names, "'", 
+               sep='', 
+               collapse=", "
+               )
+         )
+  }
+  
+  retval <- df_scores |>
+    left_join(total_score, by = "participant_id") |>
+    group_by(set_num, participant_id) |>
+    filter( row_number() == 1) |>
+    ungroup() |>
+    group_by(set_num) |>
+    mutate(
+      rank = row_number()
+    ) |>
+    ungroup() |>
+    group_by(participant_id) |>
+    summarise(
+      total_score  = first(total_score),
+      average_rank = mean(rank)
+    ) 
+  
+  if (high == "better") {
+    retval <- retval |> arrange(desc(total_score))
+  } else if (high=="worse")
+  {
+    retval <- retval |> arrange(total_score)
+  } else
+  {
+    stop("Invalid value for `high` specified:", high)
+  }
+  # otherwise don't change the order
+    
+  
+  return(retval)
+}
+```
+
+```{r}
+try(
+  # Don't stop: this is an intentional errro
+  total_scores(toss_clean, "low")
+)
+```
+
+
+```{r}
+total_scores(toss_clean, "b")
+```
+
+
+```{r}
+total_scores(toss_clean, "w")
+```
+
+```{r}
+try(
+  total_scores(7)
+)
+```
+```{r}
+try(
+  {
+    bad_df <- data.frame()
+    total_scores(bad_df)
+  }
+)
+```
+
+
 

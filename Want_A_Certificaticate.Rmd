@@ -6,3 +6,7 @@ Subject: Certificate
 Name:
 Email:
 
+
+Textbook:  How to Lie with Statistics
+
+
